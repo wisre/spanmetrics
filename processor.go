@@ -17,6 +17,7 @@ package spanmetricsprocessor // import "github.com/open-telemetry/opentelemetry-
 import (
 	"context"
 	"fmt"
+	"github.com/wisre/spanmetrics/internal/cache"
 	"sort"
 	"strings"
 	"sync"
@@ -32,8 +33,6 @@ import (
 	conventions "go.opentelemetry.io/collector/semconv/v1.6.1"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/spanmetricsprocessor/internal/cache"
 )
 
 const (
@@ -77,7 +76,7 @@ type processorImp struct {
 	// Call & Error counts.
 	callSum map[metricKey]int64
 
-	newItem         chan ptrace.Traces
+	newItem chan ptrace.Traces
 
 	// Latency histogram.
 	latencyCount         map[metricKey]uint64
@@ -243,14 +242,14 @@ func (p *processorImp) ConsumeTraces(ctx context.Context, traces ptrace.Traces) 
 func (p *processorImp) _consumeTraces() {
 	tichChan := time.NewTicker(time.Second * 10).C
 	for {
-		select{
-		case item, ok := <- p.newItem:
+		select {
+		case item, ok := <-p.newItem:
 			if !ok {
 				p.logger.Error("chan is closed")
-				break;
+				break
 			}
 			p.aggregateMetrics(item)
-		case <- tichChan:
+		case <-tichChan:
 			p.lock.Lock()
 			m, err := p.buildMetrics()
 
@@ -262,7 +261,6 @@ func (p *processorImp) _consumeTraces() {
 				p.logger.Error("build metric fail", zap.Error(err))
 				continue
 			}
-
 
 			if err = p.metricsExporter.ConsumeMetrics(context.Background(), m); err != nil {
 				p.logger.Error("consumer metric fail", zap.Error(err))
