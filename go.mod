@@ -1,5 +1,4 @@
-#module github.com/open-telemetry/opentelemetry-collector-contrib/processor/spanmetricsprocessor
-module github.com/wisre/spanmetricsprocessor
+module github.com/wisre/spanmetrics
 go 1.18
 
 require (
